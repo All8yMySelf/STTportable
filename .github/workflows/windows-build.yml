@@ -15,57 +15,59 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 1) Download AutoHotkey v2 portable (runtime / base exe)
+      # 1) Download AutoHotkey v2 portable (runtime/base). We won't assume any subfolder name.
       - name: Download AutoHotkey v2 portable (runtime)
         shell: powershell
         run: |
           $ahkZipUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.18/AutoHotkey_2.0.18.zip"
-          $ahkZip    = "autohotkey.zip"
+          $ahkZip    = "$PWD\autohotkey.zip"
           $ahkDir    = "C:\autohotkey"
           Invoke-WebRequest -Uri $ahkZipUrl -OutFile $ahkZip
+          if (!(Test-Path $ahkZip)) { Write-Error "Failed to download AutoHotkey ZIP."; exit 1 }
+          if (!(Test-Path $ahkDir)) { New-Item -ItemType Directory -Path $ahkDir | Out-Null }
           Expand-Archive -Path $ahkZip -DestinationPath $ahkDir -Force
-          if (!(Test-Path "$ahkDir\v2\AutoHotkey64.exe")) {
-            Write-Error "AutoHotkey v2 base exe not found at $ahkDir\v2\AutoHotkey64.exe"
-            exit 1
-          }
-          Write-Host "AHK runtime extracted to $ahkDir"
 
-      # 2) Download Ahk2Exe portable (compiler)
+          # Find the v2 base exe anywhere under C:\autohotkey
+          $baseExe = Get-ChildItem -Path $ahkDir -Recurse -File -Filter "AutoHotkey64.exe" | Select-Object -First 1
+          if (-not $baseExe) { Write-Error "AutoHotkey64.exe not found under $ahkDir"; exit 1 }
+          "$($baseExe.FullName)" | Out-File "$env:RUNNER_TEMP\BASE_PATH.txt"
+
+      # 2) Download the Ahk2Exe compiler (portable)
       - name: Download Ahk2Exe compiler (portable)
         shell: powershell
         run: |
           $compilerUrl = "https://github.com/AutoHotkey/Ahk2Exe/releases/download/1.1.37.01/Ahk2Exe.zip"
-          $compilerZip = "Ahk2Exe.zip"
+          $compilerZip = "$PWD\Ahk2Exe.zip"
           $compilerDir = "C:\Ahk2Exe"
           Invoke-WebRequest -Uri $compilerUrl -OutFile $compilerZip
+          if (!(Test-Path $compilerZip)) { Write-Error "Failed to download Ahk2Exe ZIP."; exit 1 }
+          if (!(Test-Path $compilerDir)) { New-Item -ItemType Directory -Path $compilerDir | Out-Null }
           Expand-Archive -Path $compilerZip -DestinationPath $compilerDir -Force
-          if (!(Test-Path "$compilerDir\Ahk2Exe.exe")) {
-            Write-Error "Ahk2Exe.exe not found after extraction."
-            exit 1
-          }
-          Write-Host "Compiler extracted to $compilerDir"
+          if (!(Test-Path "$compilerDir\Ahk2Exe.exe")) { Write-Error "Ahk2Exe.exe not found after extraction."; exit 1 }
 
-      # (Optional) Show what we actually have on disk for debugging
+      # (Optional) Show what we actually have for sanity
       - name: List extracted files
         shell: powershell
         run: |
-          Write-Host "`n=== C:\autohotkey ==="
+          Write-Host "`n=== AutoHotkey tree ==="
           Get-ChildItem -Recurse -File "C:\autohotkey" | Select-Object FullName | Out-String | Write-Host
-          Write-Host "`n=== C:\Ahk2Exe ==="
+          Write-Host "`n=== Ahk2Exe tree ==="
           Get-ChildItem -Recurse -File "C:\Ahk2Exe"    | Select-Object FullName | Out-String | Write-Host
 
-      # 3) Compile (NOTE: pass /base pointing to the v2 base exe)
+      # 3) Compile using the discovered v2 base exe
       - name: Compile AHK → EXE (v2 base)
         shell: powershell
         run: |
           $compiler = "C:\Ahk2Exe\Ahk2Exe.exe"
-          $baseExe  = "C:\autohotkey\v2\AutoHotkey64.exe"
+          $baseExe  = Get-Content "$env:RUNNER_TEMP\BASE_PATH.txt" | Select-Object -First 1
           $src      = ".\src\TalkPaste.ahk"
           $out      = ".\build\TalkPaste.exe"
 
           if (!(Test-Path $src)) { Write-Error "Source not found: $src"; exit 1 }
           if (!(Test-Path $compiler)) { Write-Error "Compiler not found: $compiler"; exit 1 }
           if (!(Test-Path $baseExe))  { Write-Error "Base exe not found: $baseExe"; exit 1 }
+
+          if (!(Test-Path ".\build")) { New-Item -ItemType Directory -Path ".\build" | Out-Null }
 
           & $compiler /in $src /out $out /base $baseExe
           if (!(Test-Path $out)) { Write-Error "Compilation failed: $out not created."; exit 1 }
