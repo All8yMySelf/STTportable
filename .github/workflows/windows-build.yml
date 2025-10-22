@@ -15,55 +15,44 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Ensure build output folder exists
+      - name: Download AutoHotkey Portable
         shell: powershell
         run: |
-          $buildPath = "STTPortable\\build"
-          if (!(Test-Path $buildPath)) { New-Item -ItemType Directory -Path $buildPath | Out-Null }
-
-      - name: Setup AutoHotkey compiler
-        shell: powershell
-        run: |
-          # Fetch AutoHotkey's portable release instead of using Chocolatey.
+          Write-Host "Downloading AutoHotkey v2 portable ZIP..."
           $zipUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.18/AutoHotkey_2.0.18.zip"
-          $zipPath = Join-Path $env:TEMP "AutoHotkey_2.0.18.zip"
+          $zipPath = "autohotkey.zip"
+          $extractDir = "C:\autohotkey"
           Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
-          $destination = "C:\\autohotkey"
-          if (Test-Path $destination) {
-            Remove-Item $destination -Recurse -Force
+          Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
+          if (!(Test-Path "$extractDir\Compiler\Ahk2Exe.exe")) {
+              Write-Error "Ahk2Exe compiler not found after extraction."
+              exit 1
           }
-          Expand-Archive -Path $zipPath -DestinationPath $destination -Force
-          $installerScript = Join-Path $destination "UX\\install-ahk2exe.ahk"
-          $ahkExe = Join-Path $destination "AutoHotkey64.exe"
-          if (Test-Path $installerScript -and Test-Path $ahkExe) {
-            Start-Process -FilePath $ahkExe -ArgumentList $installerScript -Wait -NoNewWindow
-          }
-          $compiler = "C:\\autohotkey\\Compiler\\Ahk2Exe.exe"
-          if (!(Test-Path $compiler)) {
-            throw "Ahk2Exe not found at $compiler"
-          }
+          Write-Host "AutoHotkey extracted successfully."
 
-      - name: Compile AHK -> EXE
+      - name: Compile AHK → EXE
         shell: powershell
         run: |
-          $compiler = "C:\\autohotkey\\Compiler\\Ahk2Exe.exe"
-          $src = "STTPortable\\src\\TalkPaste.ahk"
-          $out = "STTPortable\\build\\TalkPaste.exe"
-          & $compiler /in $src /out $out
-          if (!(Test-Path $out)) {
-            throw "Compilation failed: $out not found."
+          Write-Host "Compiling TalkPaste.ahk to TalkPaste.exe..."
+          $compiler = "C:\autohotkey\Compiler\Ahk2Exe.exe"
+          & $compiler /in ".\src\TalkPaste.ahk" /out ".\build\TalkPaste.exe"
+          if (!(Test-Path ".\build\TalkPaste.exe")) {
+              Write-Error "Compilation failed: TalkPaste.exe not found."
+              exit 1
           }
+          Write-Host "Compilation complete."
 
       - name: Create ZIP artifact
         shell: powershell
         run: |
-          Compress-Archive -Path "STTPortable\\build\\TalkPaste.exe" -DestinationPath "STTPortable\\build\\TalkPaste.zip" -Force
+          Compress-Archive -Path ".\build\TalkPaste.exe" -DestinationPath ".\build\TalkPaste.zip" -Force
+          Write-Host "Created TalkPaste.zip artifact."
 
       - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
         with:
           name: TalkPaste.exe
-          path: STTPortable/build/TalkPaste.exe
+          path: build/TalkPaste.exe
           if-no-files-found: error
           compression-level: 0
 
@@ -71,5 +60,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: TalkPaste.zip
-          path: STTPortable/build/TalkPaste.zip
+          path: build/TalkPaste.zip
           if-no-files-found: error
