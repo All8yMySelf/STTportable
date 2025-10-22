@@ -72,19 +72,6 @@ Run `build/build.bat` to compile `src/TalkPaste.ahk` into a standalone executabl
 
 See [TESTING.md](TESTING.md) for end-to-end scenarios that verify recording, transcription, hotkey changes, and failure handling.
 
-## What to Do Next
-
-1. Copy `ffmpeg.exe` and `whisper.exe` into the [`bin/`](bin/) folder.
-2. Place your chosen English GGUF model (for example, `ggml-medium.en.gguf`) inside [`models/`](models/).
-3. Launch the script with AutoHotkey v2 (`src/TalkPaste.ahk`) or compile it via [`build/build.bat`](build/build.bat).
-4. Put the caret in any text field and press the toggle hotkey (default **Win+Ctrl+T**) to record, then press it again to transcribe and insert the text.
-
-If you cannot launch the script by double-clicking it, run this one-line PowerShell command instead:
-
-```
-powershell -NoProfile -ExecutionPolicy Bypass -File .\src\TalkPaste.ahk
-```
-
 ## Credits
 
 - [ffmpeg](https://ffmpeg.org/)
