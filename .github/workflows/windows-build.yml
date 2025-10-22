@@ -25,30 +25,15 @@ jobs:
         shell: powershell
         run: |
           choco install autohotkey -y
-
-      - name: Locate Ahk2Exe compiler
-        id: locate_compiler
-        shell: powershell
-        run: |
-          $pf = $env:ProgramFiles
-          $pf86 = ${env:ProgramFiles(x86)}
-          $candidates = @(
-            (Join-Path $pf 'AutoHotkey\Compiler\Ahk2Exe.exe'),
-            (Join-Path $pf 'AutoHotkey\v2\Compiler\Ahk2Exe.exe'),
-            (Join-Path $pf86 'AutoHotkey\Compiler\Ahk2Exe.exe'),
-            (Join-Path $pf86 'AutoHotkey\v2\Compiler\Ahk2Exe.exe')
-          )
-          $compiler = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
-          if (-not $compiler) {
-            Write-Error "Ahk2Exe.exe not found in expected locations: $candidates"
-            exit 1
+          $compiler = "C:\\Program Files\\AutoHotkey\\Compiler\\Ahk2Exe.exe"
+          if (!(Test-Path $compiler)) {
+            throw "Ahk2Exe not found at $compiler"
           }
-          "compiler=$compiler" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8
 
       - name: Compile AHK -> EXE
         shell: powershell
         run: |
-          $compiler = '${{ steps.locate_compiler.outputs.compiler }}'
+          $compiler = "C:\\Program Files\\AutoHotkey\\Compiler\\Ahk2Exe.exe"
           $src = "STTPortable\\src\\TalkPaste.ahk"
           $out = "STTPortable\\build\\TalkPaste.exe"
           & $compiler /in $src /out $out
