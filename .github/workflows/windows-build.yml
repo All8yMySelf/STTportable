@@ -21,11 +21,24 @@ jobs:
           $buildPath = "STTPortable\\build"
           if (!(Test-Path $buildPath)) { New-Item -ItemType Directory -Path $buildPath | Out-Null }
 
-      - name: Install AutoHotkey via Chocolatey
+      - name: Setup AutoHotkey compiler
         shell: powershell
         run: |
-          choco install autohotkey -y
-          $compiler = "C:\\Program Files\\AutoHotkey\\Compiler\\Ahk2Exe.exe"
+          # Fetch AutoHotkey's portable release instead of using Chocolatey.
+          $zipUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.18/AutoHotkey_2.0.18.zip"
+          $zipPath = Join-Path $env:TEMP "AutoHotkey_2.0.18.zip"
+          Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
+          $destination = "C:\\autohotkey"
+          if (Test-Path $destination) {
+            Remove-Item $destination -Recurse -Force
+          }
+          Expand-Archive -Path $zipPath -DestinationPath $destination -Force
+          $installerScript = Join-Path $destination "UX\\install-ahk2exe.ahk"
+          $ahkExe = Join-Path $destination "AutoHotkey64.exe"
+          if (Test-Path $installerScript -and Test-Path $ahkExe) {
+            Start-Process -FilePath $ahkExe -ArgumentList $installerScript -Wait -NoNewWindow
+          }
+          $compiler = "C:\\autohotkey\\Compiler\\Ahk2Exe.exe"
           if (!(Test-Path $compiler)) {
             throw "Ahk2Exe not found at $compiler"
           }
@@ -33,7 +46,7 @@ jobs:
       - name: Compile AHK -> EXE
         shell: powershell
         run: |
-          $compiler = "C:\\Program Files\\AutoHotkey\\Compiler\\Ahk2Exe.exe"
+          $compiler = "C:\\autohotkey\\Compiler\\Ahk2Exe.exe"
           $src = "STTPortable\\src\\TalkPaste.ahk"
           $out = "STTPortable\\build\\TalkPaste.exe"
           & $compiler /in $src /out $out
