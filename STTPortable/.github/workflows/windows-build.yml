@@ -1,0 +1,79 @@
+name: Build STTPortable (Windows)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 1 – Install AutoHotkey runtime (needed for the compiler)
+      - name: Install AutoHotkey
+        shell: powershell
+        run: |
+          choco install autohotkey.portable -y
+          Write-Host "AutoHotkey installed."
+
+      # Step 2 – Download the official Ahk2Exe compiler ZIP
+      - name: Download Ahk2Exe compiler
+        shell: powershell
+        run: |
+          $compilerUrl = "https://github.com/AutoHotkey/Ahk2Exe/releases/download/1.1.37.01/Ahk2Exe.zip"
+          $compilerZip = "Ahk2Exe.zip"
+          $compilerDir = "C:\Ahk2Exe"
+          Invoke-WebRequest -Uri $compilerUrl -OutFile $compilerZip
+          Expand-Archive -Path $compilerZip -DestinationPath $compilerDir -Force
+          if (!(Test-Path "$compilerDir\Ahk2Exe.exe")) {
+            Write-Error "Ahk2Exe compiler not found in extracted folder."
+            exit 1
+          }
+          Write-Host "Ahk2Exe compiler extracted to $compilerDir."
+
+      # Step 3 – Compile TalkPaste.ahk to TalkPaste.exe
+      - name: Compile AHK → EXE
+        shell: powershell
+        run: |
+          $ahkSource = ".\src\TalkPaste.ahk"
+          $outputExe = ".\build\TalkPaste.exe"
+          $compiler = "C:\Ahk2Exe\Ahk2Exe.exe"
+          if (!(Test-Path $ahkSource)) {
+            Write-Error "Source file not found: $ahkSource"
+            exit 1
+          }
+          & $compiler /in $ahkSource /out $outputExe
+          if (!(Test-Path $outputExe)) {
+            Write-Error "Compilation failed: TalkPaste.exe not created."
+            exit 1
+          }
+          Write-Host "Compilation succeeded: $outputExe"
+
+      # Step 4 – Create ZIP artifact
+      - name: Create ZIP artifact
+        shell: powershell
+        run: |
+          Compress-Archive -Path ".\build\TalkPaste.exe" -DestinationPath ".\build\TalkPaste.zip" -Force
+          Write-Host "TalkPaste.zip created."
+
+      # Step 5 – Upload artifacts
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TalkPaste.exe
+          path: build/TalkPaste.exe
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TalkPaste.zip
+          path: build/TalkPaste.zip
+          if-no-files-found: error
