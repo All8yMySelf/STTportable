@@ -1,0 +1,62 @@
+name: Build STTPortable (Windows)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Ensure build output folder exists
+        shell: powershell
+        run: |
+          $buildPath = "STTPortable\\build"
+          if (!(Test-Path $buildPath)) { New-Item -ItemType Directory -Path $buildPath | Out-Null }
+
+      - name: Install AutoHotkey via Chocolatey
+        shell: powershell
+        run: |
+          choco install autohotkey -y
+          $compiler = "C:\\Program Files\\AutoHotkey\\Compiler\\Ahk2Exe.exe"
+          if (!(Test-Path $compiler)) {
+            throw "Ahk2Exe not found at $compiler"
+          }
+
+      - name: Compile AHK -> EXE
+        shell: powershell
+        run: |
+          $compiler = "C:\\Program Files\\AutoHotkey\\Compiler\\Ahk2Exe.exe"
+          $src = "STTPortable\\src\\TalkPaste.ahk"
+          $out = "STTPortable\\build\\TalkPaste.exe"
+          & $compiler /in $src /out $out
+          if (!(Test-Path $out)) {
+            throw "Compilation failed: $out not found."
+          }
+
+      - name: Create ZIP artifact
+        shell: powershell
+        run: |
+          Compress-Archive -Path "STTPortable\\build\\TalkPaste.exe" -DestinationPath "STTPortable\\build\\TalkPaste.zip" -Force
+
+      - name: Upload EXE artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TalkPaste.exe
+          path: STTPortable/build/TalkPaste.exe
+          if-no-files-found: error
+          compression-level: 0
+
+      - name: Upload ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TalkPaste.zip
+          path: STTPortable/build/TalkPaste.zip
+          if-no-files-found: error
