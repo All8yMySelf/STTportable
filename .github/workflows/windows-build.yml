@@ -15,38 +15,66 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download AutoHotkey Portable
+      # 1) Download AutoHotkey v2 portable (runtime / base exe)
+      - name: Download AutoHotkey v2 portable (runtime)
         shell: powershell
         run: |
-          Write-Host "Downloading AutoHotkey v2 portable ZIP..."
-          $zipUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.18/AutoHotkey_2.0.18.zip"
-          $zipPath = "autohotkey.zip"
-          $extractDir = "C:\autohotkey"
-          Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
-          Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
-          if (!(Test-Path "$extractDir\Compiler\Ahk2Exe.exe")) {
-              Write-Error "Ahk2Exe compiler not found after extraction."
-              exit 1
+          $ahkZipUrl = "https://github.com/AutoHotkey/AutoHotkey/releases/download/v2.0.18/AutoHotkey_2.0.18.zip"
+          $ahkZip    = "autohotkey.zip"
+          $ahkDir    = "C:\autohotkey"
+          Invoke-WebRequest -Uri $ahkZipUrl -OutFile $ahkZip
+          Expand-Archive -Path $ahkZip -DestinationPath $ahkDir -Force
+          if (!(Test-Path "$ahkDir\v2\AutoHotkey64.exe")) {
+            Write-Error "AutoHotkey v2 base exe not found at $ahkDir\v2\AutoHotkey64.exe"
+            exit 1
           }
-          Write-Host "AutoHotkey extracted successfully."
+          Write-Host "AHK runtime extracted to $ahkDir"
 
-      - name: Compile AHK → EXE
+      # 2) Download Ahk2Exe portable (compiler)
+      - name: Download Ahk2Exe compiler (portable)
         shell: powershell
         run: |
-          Write-Host "Compiling TalkPaste.ahk to TalkPaste.exe..."
-          $compiler = "C:\autohotkey\Compiler\Ahk2Exe.exe"
-          & $compiler /in ".\src\TalkPaste.ahk" /out ".\build\TalkPaste.exe"
-          if (!(Test-Path ".\build\TalkPaste.exe")) {
-              Write-Error "Compilation failed: TalkPaste.exe not found."
-              exit 1
+          $compilerUrl = "https://github.com/AutoHotkey/Ahk2Exe/releases/download/1.1.37.01/Ahk2Exe.zip"
+          $compilerZip = "Ahk2Exe.zip"
+          $compilerDir = "C:\Ahk2Exe"
+          Invoke-WebRequest -Uri $compilerUrl -OutFile $compilerZip
+          Expand-Archive -Path $compilerZip -DestinationPath $compilerDir -Force
+          if (!(Test-Path "$compilerDir\Ahk2Exe.exe")) {
+            Write-Error "Ahk2Exe.exe not found after extraction."
+            exit 1
           }
-          Write-Host "Compilation complete."
+          Write-Host "Compiler extracted to $compilerDir"
+
+      # (Optional) Show what we actually have on disk for debugging
+      - name: List extracted files
+        shell: powershell
+        run: |
+          Write-Host "`n=== C:\autohotkey ==="
+          Get-ChildItem -Recurse -File "C:\autohotkey" | Select-Object FullName | Out-String | Write-Host
+          Write-Host "`n=== C:\Ahk2Exe ==="
+          Get-ChildItem -Recurse -File "C:\Ahk2Exe"    | Select-Object FullName | Out-String | Write-Host
+
+      # 3) Compile (NOTE: pass /base pointing to the v2 base exe)
+      - name: Compile AHK → EXE (v2 base)
+        shell: powershell
+        run: |
+          $compiler = "C:\Ahk2Exe\Ahk2Exe.exe"
+          $baseExe  = "C:\autohotkey\v2\AutoHotkey64.exe"
+          $src      = ".\src\TalkPaste.ahk"
+          $out      = ".\build\TalkPaste.exe"
+
+          if (!(Test-Path $src)) { Write-Error "Source not found: $src"; exit 1 }
+          if (!(Test-Path $compiler)) { Write-Error "Compiler not found: $compiler"; exit 1 }
+          if (!(Test-Path $baseExe))  { Write-Error "Base exe not found: $baseExe"; exit 1 }
+
+          & $compiler /in $src /out $out /base $baseExe
+          if (!(Test-Path $out)) { Write-Error "Compilation failed: $out not created."; exit 1 }
+          Write-Host "Compilation complete: $out"
 
       - name: Create ZIP artifact
         shell: powershell
         run: |
           Compress-Archive -Path ".\build\TalkPaste.exe" -DestinationPath ".\build\TalkPaste.zip" -Force
-          Write-Host "Created TalkPaste.zip artifact."
 
       - name: Upload EXE artifact
         uses: actions/upload-artifact@v4
