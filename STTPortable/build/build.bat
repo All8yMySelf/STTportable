@@ -5,6 +5,7 @@ set SCRIPT_DIR=%~dp0
 set ROOT_DIR=%SCRIPT_DIR%..\
 set SRC=%ROOT_DIR%src\TalkPaste.ahk
 set OUT=%SCRIPT_DIR%TalkPaste.exe
+set TEST_OUT=%SCRIPT_DIR%TalkPaste.test
 set ICON=%ROOT_DIR%src\mic.ico
 
 if not exist "%SRC%" (
@@ -21,6 +22,7 @@ if errorlevel 1 (
 )
 
 del "%OUT%" >nul 2>&1
+del "%TEST_OUT%" >nul 2>&1
 
 set CMD="%AHK_COMPILER%" /in "%SRC%" /out "%OUT%"
 if exist "%ICON%" (
@@ -35,4 +37,12 @@ if errorlevel 1 (
 )
 
 echo Output: %OUT%
+
+copy /y "%OUT%" "%TEST_OUT%" >nul
+if errorlevel 1 (
+    echo Failed to copy %%OUT%% to %%TEST_OUT%%.
+    exit /b 1
+)
+
+echo Renamed copy: %TEST_OUT%
 exit /b 0
