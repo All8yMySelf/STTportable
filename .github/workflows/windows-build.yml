@@ -47,7 +47,7 @@ jobs:
             $proc = Start-Process -FilePath $installer -ArgumentList "/VERYSILENT","/NORESTART","/SP-","/SUPPRESSMSGBOXES" -PassThru
             $done = $proc.WaitForExit(60000)
             if (-not $done) {
-              Write-Host "Installer taking too long -- killing process..."
+              Write-Host "Installer taking too long — killing process..."
               Stop-Process -Id $proc.Id -Force
             }
           }
