@@ -1,0 +1,3 @@
+Place a Windows build of ffmpeg.exe in this folder.
+Recommended source: https://ffmpeg.org/download.html
+Use a static build that includes ffmpeg.exe. Only the executable is required.

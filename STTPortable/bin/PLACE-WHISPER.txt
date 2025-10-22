@@ -1,0 +1,2 @@
+Place whisper.exe from the whisper.cpp project in this folder.
+Obtain a Windows build of whisper.cpp and copy whisper.exe here for offline transcription.

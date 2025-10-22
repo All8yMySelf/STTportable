@@ -1,0 +1,34 @@
+# Binaries and tools
+bin/*.exe
+bin/*.dll
+bin/*.pdb
+
+# Placeholder instructions
+!bin/PLACE-FFMPEG.txt
+!bin/PLACE-WHISPER.txt
+
+# Models and audio
+models/*
+!models/.gitkeep
+*.wav
+*.mp3
+*.flac
+
+# Logs and config
+logs/*
+!logs/.gitkeep
+config/config.ini
+
+# Build artifacts
+build/*.exe
+build/*.ahk
+build/*.ico
+build/*.zip
+build/*.7z
+build/*.log
+
+# OS junk
+Thumbs.db
+.DS_Store
+*.tmp
+~$*
