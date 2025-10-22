@@ -44,14 +44,22 @@ jobs:
             if (!(Test-Path $installer)) { throw "Failed to download AutoHotkey installer." }
 
             # Inno Setup silent install
-            Start-Process -FilePath $installer -ArgumentList "/VERYSILENT","/NORESTART","/SP-" -Wait -PassThru | Out-Null
+            $proc = Start-Process -FilePath $installer -ArgumentList "/VERYSILENT","/NORESTART","/SP-","/SUPPRESSMSGBOXES" -PassThru
+            $done = $proc.WaitForExit(60000)
+            if (-not $done) {
+              Write-Host "Installer taking too long -- killing process..."
+              Stop-Process -Id $proc.Id -Force
+            }
           }
 
           if (!(Have-AHK)) {
             throw "AutoHotkey compiler not found after install. Expected:`n$compilerPath`n$basePath"
           }
 
-          "$compilerPath`n$basePath" | Out-File "$env:RUNNER_TEMP\ahk_paths.txt"
+          Set-Content -Path "$env:RUNNER_TEMP\ahk_paths.txt" -Value @(
+            $compilerPath,
+            $basePath
+          )
 
       - name: Compile AHK → EXE
         shell: powershell
