@@ -68,6 +68,8 @@ Error conditions append timestamped entries to `logs/sttportable.log`. Include t
 
 Run `build/build.bat` to compile `src/TalkPaste.ahk` into a standalone executable. The script auto-detects an optional icon (`src/mic.ico`). Ensure Ahk2Exe is installed and available on your PATH.
 
+After a successful build the script also creates `build/TalkPaste.test`, which is just the generated executable with the extension renamed for easier file sharing. Rename it back to `TalkPaste.exe` before running it on Windows.
+
 ## Manual Tests
 
 See [TESTING.md](TESTING.md) for end-to-end scenarios that verify recording, transcription, hotkey changes, and failure handling.
