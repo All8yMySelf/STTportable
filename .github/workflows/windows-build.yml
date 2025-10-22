@@ -56,7 +56,10 @@ jobs:
             throw "AutoHotkey compiler not found after install. Expected:`n$compilerPath`n$basePath"
           }
 
-          "$compilerPath`n$basePath" | Out-File "$env:RUNNER_TEMP\ahk_paths.txt"
+          Set-Content -Path "$env:RUNNER_TEMP\ahk_paths.txt" -Value @(
+            $compilerPath,
+            $basePath
+          )
 
       - name: Compile AHK → EXE
         shell: powershell
